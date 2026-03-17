@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CVtools — Créez votre CV professionnel</title>
+  <meta name="description" content="Créez votre CV professionnel en 5 minutes. 20 modèles, sans inscription, téléchargement PDF instantané." />
+  <meta name="theme-color" content="#b85c38" />
+  <meta property="og:title" content="CVtools — Créez votre CV" />
+  <meta property="og:description" content="Créez votre CV professionnel en 5 minutes. 20 modèles, sans inscription." />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:type" content="website" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="CVtools" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%;background:#1c1812}
+    #splash{
+      position:fixed;inset:0;z-index:99999;
+      background:#1c1812;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:20px;
+    }
+    #splash-logo{
+      width:72px;height:72px;background:#b85c38;
+      border-radius:18px;display:flex;
+      align-items:center;justify-content:center;
+    }
+    #splash-logo span{
+      font-family:Georgia,serif;font-size:40px;
+      font-weight:700;font-style:italic;color:#fff;
+      line-height:1;
+    }
+    #splash-name{
+      font-family:Georgia,serif;font-size:26px;
+      font-weight:700;font-style:italic;
+      color:#fff;letter-spacing:1px;
+    }
+    #splash-bar{
+      width:160px;height:3px;
+      background:rgba(255,255,255,0.1);
+      border-radius:2px;overflow:hidden;
+    }
+    #splash-progress{
+      height:100%;width:0%;
+      background:#b85c38;border-radius:2px;
+      transition:width 0.3s ease;
+    }
+    #splash-txt{
+      font-family:sans-serif;font-size:12px;
+      color:rgba(255,255,255,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div id="splash-logo"><span>C</span></div>
+    <div id="splash-name">CVtools</div>
+    <div id="splash-bar"><div id="splash-progress"></div></div>
+    <div id="splash-txt">Chargement...</div>
+  </div>
+
+  <div id="root"></div>
+
+  <script>
+    // Barre de progression animée
+    var p = document.getElementById('splash-progress');
+    var pct = 0;
+    var iv = setInterval(function(){
+      pct += Math.random() * 15;
+      if(pct > 90) pct = 90;
+      p.style.width = pct + '%';
+    }, 200);
+
+    window.__hideSplash = function(){
+      clearInterval(iv);
+      p.style.width = '100%';
+      setTimeout(function(){
+        var s = document.getElementById('splash');
+        if(s){
+          s.style.transition = 'opacity 0.4s ease';
+          s.style.opacity = '0';
+          setTimeout(function(){ s.remove(); }, 400);
+        }
+      }, 200);
+    };
+
+    // Fallback max 8 secondes
+    setTimeout(function(){ window.__hideSplash && window.__hideSplash(); }, 8000);
+  </script>
+
+  <script type="module" src="/src/main.jsx"></script>
+
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',function(){
+        navigator.serviceWorker.register('/sw.js')
+          .catch(function(e){ console.warn('SW:',e); });
+      });
+    }
+  </script>
+</body>
+</html>
