@@ -1,0 +1,29 @@
+{
+  "name": "cvtools",
+  "private": true,
+  "version": "9.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "@vitejs/plugin-legacy": "^5.2.0",
+    "vite": "^5.0.0",
+    "terser": "^5.24.0"
+  },
+  "browserslist": [
+    "Chrome >= 58",
+    "Firefox >= 57",
+    "Safari >= 11",
+    "Samsung >= 8",
+    "Opera >= 45",
+    "Edge >= 18"
+  ]
+}
