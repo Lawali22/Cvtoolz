@@ -1531,6 +1531,152 @@ function PersonalInfoA({ cv, accent }) {
   return <><A label="Informations personnelles" color={accent}/><p style={{fontSize:10.5,color:"#444",lineHeight:1.8,margin:0}}>{items.join("   ·   ")}</p></>;
 }
 
+/* ─── PDF « texte réel » pour les modèles ATS ───
+   Un CV ATS n'a de sens que si son texte est du vrai texte (sélectionnable,
+   copiable, lisible par les logiciels de recrutement) — pas une image.
+   Cette fonction dessine donc le contenu directement avec les primitives
+   texte de jsPDF (pas de html2canvas), quel que soit le modèle ATS choisi :
+   la mise en page reste volontairement simple et identique pour tous,
+   ce qui est justement la caractéristique recherchée d'un CV ATS. */
+function renderATSTextPDF(cv, pdf, watermark=false) {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 18;
+  const maxW = pageW - margin * 2;
+  let y = margin;
+
+  const checkBreak = (needed) => {
+    if (y + needed > pageH - margin) { pdf.addPage(); y = margin; }
+  };
+  const heading = (label) => {
+    checkBreak(11);
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(10.5); pdf.setTextColor(20,20,20);
+    pdf.text(label.toUpperCase(), margin, y);
+    y += 1.5;
+    pdf.setDrawColor(20,20,20); pdf.setLineWidth(0.4);
+    pdf.line(margin, y, margin + maxW, y);
+    y += 6;
+  };
+  const paragraph = (text, size=10, color=[70,70,70], lh=4.8) => {
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(size); pdf.setTextColor(...color);
+    pdf.splitTextToSize(text, maxW).forEach(line => { checkBreak(lh); pdf.text(line, margin, y); y += lh; });
+  };
+  const rightText = (text, size, color) => {
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(size); pdf.setTextColor(...color);
+    pdf.text(text, margin + maxW - pdf.getTextWidth(text), y);
+  };
+
+  // En-tête
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(18); pdf.setTextColor(20,20,20);
+  pdf.text(fullName(cv), margin, y); y += 7;
+  if (cv.title) {
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(11); pdf.setTextColor(70,70,70);
+    pdf.text(cv.title, margin, y); y += 6;
+  }
+  const contact = contactLine(cv, "   |   ");
+  if (contact) {
+    pdf.setFontSize(9.5); pdf.setTextColor(100,100,100);
+    pdf.splitTextToSize(contact, maxW).forEach(line => { pdf.text(line, margin, y); y += 5; });
+  }
+  y += 2;
+  pdf.setDrawColor(20,20,20); pdf.setLineWidth(0.6);
+  pdf.line(margin, y, margin + maxW, y); y += 8;
+
+  const pinfo = personalInfoItems(cv);
+  if (pinfo.length) { heading("Informations personnelles"); paragraph(pinfo.join("   ·   ")); y += 3; }
+
+  if (cv.summary) { heading("Résumé"); paragraph(cv.summary); y += 3; }
+
+  if (cv.experiences?.length) {
+    heading("Expériences professionnelles");
+    cv.experiences.forEach(e => {
+      checkBreak(12);
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(10.5); pdf.setTextColor(20,20,20);
+      pdf.text(e.role || "", margin, y);
+      const dates = `${e.start||""}${(e.end||e.current) ? " – " + (e.current?"Présent":e.end) : ""}`;
+      if (dates) rightText(dates, 9, [100,100,100]);
+      y += 5;
+      if (e.company) {
+        pdf.setFont("helvetica", "bold"); pdf.setFontSize(10); pdf.setTextColor(60,60,60);
+        pdf.text(e.company, margin, y); y += 5;
+      }
+      if (e.description) paragraph(e.description);
+      y += 4;
+    });
+  }
+
+  if (cv.education?.length) {
+    heading("Formation");
+    cv.education.forEach(e => {
+      checkBreak(10);
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(10.5); pdf.setTextColor(20,20,20);
+      pdf.text(`${e.degree||""}${e.field?` — ${e.field}`:""}`, margin, y);
+      const dates = `${e.start||""}${e.end?" – "+e.end:""}`;
+      if (dates) rightText(dates, 9, [100,100,100]);
+      y += 5;
+      if (e.school) {
+        pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(90,90,90);
+        pdf.text(e.school, margin, y); y += 6;
+      } else y += 2;
+    });
+  }
+
+  if (cv.skills)    { heading("Compétences"); paragraph(cv.skills); y += 3; }
+  if (cv.languages) { heading("Langues");     paragraph(cv.languages); y += 3; }
+
+  const hobbies = cv.hobbies?.filter(h=>h.label).map(h=>h.label) || [];
+  if (hobbies.length) { heading("Centres d'intérêt"); paragraph(hobbies.join("  ·  ")); y += 3; }
+
+  if (cv.certifications?.trim()) { heading("Certifications"); paragraph(cv.certifications); y += 3; }
+  if (cv.publications?.trim())   { heading("Publications & Projets"); paragraph(cv.publications); y += 3; }
+
+  const refs = cv.references?.filter(r=>r.name) || [];
+  if (refs.length) {
+    heading("Références professionnelles");
+    refs.forEach(r => {
+      checkBreak(6);
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(10); pdf.setTextColor(20,20,20);
+      pdf.text(r.name, margin, y);
+      const nameW = pdf.getTextWidth(r.name);
+      let rest = "";
+      if (r.role) rest += ` — ${r.role}${r.company?`, ${r.company}`:""}`;
+      if (r.email) rest += `   ${r.email}`;
+      if (r.phone) rest += `   ${r.phone}`;
+      if (rest) {
+        pdf.setFont("helvetica", "normal"); pdf.setFontSize(9.5); pdf.setTextColor(90,90,90);
+        pdf.text(rest, margin + nameW + 2, y);
+      }
+      y += 5.5;
+    });
+  } else if (cv.refsOnRequest) {
+    paragraph("Références disponibles sur demande.", 9.5, [130,130,130]);
+  }
+
+  if (cv.signatureCity || cv.signatureDate) {
+    y += 6; checkBreak(14);
+    pdf.setFont("helvetica", "italic"); pdf.setFontSize(9.5); pdf.setTextColor(120,120,120);
+    pdf.splitTextToSize("Je déclare sur l'honneur que toutes ces informations sont sincères et vérifiables.", maxW)
+      .forEach(line => { pdf.text(line, margin, y); y += 5; });
+    y += 3;
+    rightText([cv.signatureCity, cv.signatureDate].filter(Boolean).join(", le "), 10.5, [100,100,100]);
+  }
+
+  // Filigrane (texte réel, diagonal, semi-transparent) — même logique que
+  // le filigrane visuel : posé sur chaque page tant que le CV n'est pas payé.
+  if (watermark) {
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      pdf.setPage(p);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(46);
+      pdf.setTextColor(20,20,20);
+      if (pdf.GState) pdf.setGState(new pdf.GState({ opacity: 0.09 }));
+      pdf.text("CVTOOLS", pageW/2, pageH/2, { angle: 30, align: "center" });
+      if (pdf.GState) pdf.setGState(new pdf.GState({ opacity: 1 }));
+    }
+  }
+}
+
 function CVFooter({ cv, a }) {
   const hasHobbies = cv.hobbies?.filter(h=>h.label).length > 0;
   const hasRefs    = cv.references?.filter(r=>r.name).length > 0;
@@ -2667,15 +2813,19 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
   const downloadPDF = async () => {
     setExporting(true); setExportErr(null);
     try {
-      await Promise.all([
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
-      ]);
-      const el = cvRef.current;
-      if (!el) throw new Error("Élément introuvable");
+      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      await renderElementToPDF(el, pdf);
+      if (isATS) {
+        // Modèles ATS : texte réel (sélectionnable/copiable/indexable),
+        // pas une image — c'est ce qui rend un CV vraiment compatible ATS.
+        renderATSTextPDF(cv, pdf, !effectivePaid);
+      } else {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+        const el = cvRef.current;
+        if (!el) throw new Error("Élément introuvable");
+        await renderElementToPDF(el, pdf);
+      }
       await embedAndDownload(pdf, `${fullName(form).replace(/ /g,"_")}.pdf`);
     } catch(err) {
       console.error(err);
@@ -3074,6 +3224,7 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
   const [showCongrats, setShowCongrats] = useState(false);
   const [building, setBuilding]     = useState(true);
   const [activeTab, setActiveTab]   = useState("cv"); // "cv" | "letter" | "both"
+  const isATS = form.template?.startsWith("ats-");
   // Filigrane : retiré une fois le paiement confirmé (ou toujours retiré
   // si le paiement est désactivé via PAIEMENT_ACTIF).
   const effectivePaid = !PAIEMENT_ACTIF || isPaid;
@@ -3219,6 +3370,15 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
     return pdf;
   };
 
+  // CV ATS : texte réel (sélectionnable/copiable/indexable) plutôt qu'une
+  // image — c'est ce qui rend un CV vraiment compatible ATS.
+  const renderCVAsTextPDF = () => {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+    renderATSTextPDF(cv, pdf, !effectivePaid);
+    return pdf;
+  };
+
   const downloadBoth = async () => {
     setExporting(true); setExportErr(null); setDoneMsg("");
     try {
@@ -3229,10 +3389,10 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
       ]);
       const name = fullName(form).replace(/ /g,"_");
 
-      if (!cvRef.current || !letterRef.current)
+      if (!letterRef.current || (!isATS && !cvRef.current))
         throw new Error("Documents non chargés, attendez quelques secondes et réessayez.");
 
-      const pdfCV     = await renderElToPDF(cvRef.current);
+      const pdfCV     = isATS ? renderCVAsTextPDF() : await renderElToPDF(cvRef.current);
       const pdfLetter = await renderElToPDF(letterRef.current);
 
       const zip = new window.JSZip();
