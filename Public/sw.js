@@ -3,14 +3,13 @@
    Cache-first pour les assets statiques
 ───────────────────────────────────────── */
 
-const CACHE_NAME = "cvtools-v9";
+const CACHE_NAME = "cvtools-v10";
 const URLS_TO_CACHE = [
   "/",
   "/index.html",
-  "/assets/index.js",   // remplacé par Vite au build
-  "/assets/index.css",  // remplacé par Vite au build
+  "/assets/app.js",
   // Polices Google (mises en cache au premier chargement)
-  "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap",
+  "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap",
   // Librairies PDF
   "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
