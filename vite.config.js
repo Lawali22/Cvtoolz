@@ -7,7 +7,6 @@ export default defineConfig({
     react({
       jsxRuntime: 'classic',
     }),
-    // Plugin legacy — génère un bundle compatible avec les vieux navigateurs
     legacy({
       targets: ['defaults', 'not IE 11', 'Chrome >= 58', 'Firefox >= 57', 'Safari >= 11'],
       additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
