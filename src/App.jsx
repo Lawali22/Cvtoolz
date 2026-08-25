@@ -2732,7 +2732,9 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
     const margin = 0;
     const usableH = pageH - margin * 2;
 
-    // Prend un snapshot haute résolution de l'élément
+    // Prend un snapshot haute résolution de l'élément.
+    // JPEG qualité 0.92 : imperceptible à l'œil sur ce type de contenu
+    // (aplats de couleur, texte, photo) mais 5 à 10x plus léger qu'un PNG.
     const fullCanvas = await window.html2canvas(el, {
       scale: 3, useCORS: true, allowTaint: true,
       backgroundColor: "#ffffff", logging: false,
@@ -2750,7 +2752,7 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
       const scale = pageHeightPx / fullCanvas.height;
       const drawW = (pageW - margin * 2) * scale;
       const offsetX = margin + ((pageW - margin * 2) - drawW) / 2;
-      const imgData = fullCanvas.toDataURL("image/png");
+      const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
       pdf.addImage(imgData, "JPEG", offsetX, margin, drawW, usableH);
       return;
     }
@@ -2803,7 +2805,7 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
       tmpCanvas.height = sliceH;
       const ctx = tmpCanvas.getContext("2d");
       ctx.drawImage(fullCanvas, 0, slice.start, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
-      const imgData = tmpCanvas.toDataURL("image/png");
+      const imgData = tmpCanvas.toDataURL("image/jpeg", 0.92);
       const sliceHmm = sliceH / pxPerMm;
       pdf.addImage(imgData, "JPEG", margin, margin, pageW - margin*2, sliceHmm);
     });
@@ -2815,7 +2817,7 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
     try {
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4", compress:true });
       if (isATS) {
         // Modèles ATS : texte réel (sélectionnable/copiable/indexable),
         // pas une image — c'est ce qui rend un CV vraiment compatible ATS.
@@ -2848,7 +2850,7 @@ function StepResult({ form, onRestart, onAddLetter, isPaid, setIsPaid }) {
       const el = letterRef.current;
       if (!el) throw new Error("Lettre introuvable");
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4", compress:true });
       await renderElementToPDF(el, pdf);
       pdf.save(`Lettre_${fullName(form).replace(/ /g,"_")}.pdf`);
     } catch(err) {
@@ -3279,10 +3281,10 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
       scale: 3, useCORS: true, allowTaint: true,
       backgroundColor: "#fff", logging: false,
     });
-    const img = canvas.toDataURL("image/png");
+    const img = canvas.toDataURL("image/jpeg", 0.92);
     const W = 210, H = (canvas.height / canvas.width) * W;
     if (pageNum > 1) pdf.addPage();
-    pdf.addImage(img, "PNG", 0, 0, W, Math.min(H, 297));
+    pdf.addImage(img, "JPEG", 0, 0, W, Math.min(H, 297));
   };
 
   // Génère un PDF en évitant de couper les blocs entre les pages
@@ -3307,8 +3309,8 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
       const scale = pageHeightPx / fullCanvas.height;
       const drawW = pageW * scale;
       const offsetX = (pageW - drawW) / 2;
-      const imgData = fullCanvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", offsetX, 0, drawW, pageH);
+      const imgData = fullCanvas.toDataURL("image/jpeg", 0.92);
+      pdf.addImage(imgData, "JPEG", offsetX, 0, drawW, pageH);
       return pdf;
     }
 
@@ -3356,16 +3358,16 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
       tmpCanvas.height = sliceH;
       const ctx = tmpCanvas.getContext("2d");
       ctx.drawImage(fullCanvas, 0, slice.start, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
-      const imgData = tmpCanvas.toDataURL("image/png");
+      const imgData = tmpCanvas.toDataURL("image/jpeg", 0.92);
       const sliceHmm = sliceH / pxPerMm;
-      pdf.addImage(imgData, "PNG", 0, 0, pageW, sliceHmm);
+      pdf.addImage(imgData, "JPEG", 0, 0, pageW, sliceHmm);
     });
     return pdf;
   };
 
   const renderElToPDF = async (el) => {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+    const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4", compress:true });
     await renderElementToPDFSmart(el, pdf);
     return pdf;
   };
@@ -3374,7 +3376,7 @@ function StepResultCombo({ form, onRestart, isPaid, setIsPaid }) {
   // image — c'est ce qui rend un CV vraiment compatible ATS.
   const renderCVAsTextPDF = () => {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+    const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4", compress:true });
     renderATSTextPDF(cv, pdf, !effectivePaid);
     return pdf;
   };
